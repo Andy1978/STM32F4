@@ -20,15 +20,12 @@ int main(void) {
   GPIO_Init(GPIOD, &GPIO_InitStructure);
 
   while (1) {
-    /* Set PD12 Green */
+    // orange und rote LED des STM32F469 Discovery Boards abwechseln blinken lassen
     GPIOD->BSRRL = GPIO_Pin_4;
-    /* Reset PD13 Orange, PD14 Red, PD15 Blue */
     GPIOD->BSRRH = GPIO_Pin_5;
     Delay(5000000L);
 
-    /* Set PD13 Orange */
     GPIOD->BSRRL = GPIO_Pin_5;
-    /* Reset PD12 Green, PD14 Red, PD15 Blue */
     GPIOD->BSRRH = GPIO_Pin_4;
     Delay(5000000L);
   }
