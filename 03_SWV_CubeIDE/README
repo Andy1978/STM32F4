@@ -1,0 +1,78 @@
+Da ich in Atollic TureSTUDIO SWV (Serial Wire Viewer) nicht zum laufen gebracht habe,
+hier mein Versuch mit der CubeIDE
+
+- Das Board ist ein 32F469IDISCOVERY (Cortex-M4)
+
+- Der eingebaute ST-Link V2-1 hat firmware V2J37M27 und ist in
+  Debug + Mass storage + VCP Modus konfiguriert
+
+Ich starte STM32CubeIDE v1.6.1
+  File -> New -> STM32 Project
+  Board Selector -> STM32F469I-DISCO. Wähle das Board -> Next
+  Project Name: swv_foo1, Language: C, Binary Type: Executable, Project Type STM32Cube -> Next
+  Firmware Package STM32Cube FW_F4 V1.26.1 -> Finish
+  
+  Initialize all peripherals with their default Mode? -> Yes
+  SYS Debug steht auf "Serial Wire", ich lasse alles wie voreingestellt
+  Clock Configuration zeigt SYSCLK 180MHz
+  
+  Ich speichere die .ioc -> Generate Code -> YES
+
+  in main.c:StartDefaultTask ändere ich in der Endlosschleife:
+      osDelay(500);
+      HAL_GPIO_TogglePin (LED2_GPIO_Port, LED2_Pin);
+      ITM_SendChar ('x');
+  
+  Project -> Buil Project (läuft ohne errors und ohne warnings durch)
+  Run -> Debug Configurations -> STM32 Corex-M C/C++ Application -> New launch configuration
+    Debugger -> ST-LINK (ST-LINK GDB server)
+    Serial Wire Viewer (SWV)
+      [x] Enable
+      Core Clock 180MHz    (eingestellt, der Rest unten default)
+      SWO Clock: 2000 kHz
+      Port number: 61235
+      [x] Wait for sync packet
+    
+    Apply -> Debug
+    Download und dann Verifying läuft, Debugger stopped in main bei HAL_Init ()
+    
+    Im Tab "SWV ITM Data Console"
+      Configure Trace:
+        Timestamps
+          [x] Enable Prescaler 1
+        ITM Stimulus Ports
+          [x] 0
+        -> Ok
+      Port 0 erscheint
+      -> roter Kreis (Start Trace)
+    F8 (Resume)
+    Orange LED (LED2) fängt an mit 1Hz zu blinken, allerdings bleibt
+    SWV Trace Log, SWV ITM Data Console, SWV Statistical Profiling alles leer.
+
+  In einem Forum habe ich gelesen, dass man bei manchen MCUs die Funktion
+  erst aktivieren muss, deshlab habe ich in die main.c direkt hinter alle _Init()
+  in den "USER CODE BEGIN/END 2"
+
+    volatile uint32_t *ITM_LAR = (volatile uint32_t *)0xE0000FB0; // ITM->LAR
+    *ITM_LAR = 0xC5ACCE55; // Enable Access
+
+  aber ohne Änderung.
+
+  Dann habe ich in der swv_foo1.ioc die Einstellung für PB3 angeschaut: I2S3_CK
+    habe ich Reset_State (der sollte laut DS JTDO/TRACESWO sein)
+    System core - SYS Debug könnte ich jetzt auf "Trace Asynchronous Sw" stellen,
+    hab es aber vorerst auf "Serial Wire" gelassen.
+
+
+
+
+
+-----------------------
+
+Libraries/CMSIS/Include/core_cm4.h:#define DWT_CTRL_EXCTRCENA_Pos             16                                          /*!< DWT CTRL: EXCTRCENA Position */
+Libraries/CMSIS/Include/core_cm4.h:#define DWT_CTRL_EXCTRCENA_Msk             (0x1UL << DWT_CTRL_EXCTRCENA_Pos)           /*!< DWT CTRL: EXCTRCENA Mask */
+Libraries/CMSIS/Include/core_cm4.h:#define CoreDebug_DEMCR_TRCENA_Pos         24                                             /*!< CoreDebug DEMCR: TRCENA Position */
+Libraries/CMSIS/Include/core_cm4.h:#define CoreDebug_DEMCR_TRCENA_Msk         (1UL << CoreDebug_DEMCR_TRCENA_Pos)            /*!< CoreDebug DEMCR: TRCENA Mask */
+  
+nett:
+https://mcuoneclipse.com/2016/10/17/tutorial-using-single-wire-output-swo-with-arm-cortex-m-and-eclipse/
