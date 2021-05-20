@@ -1,0 +1,81 @@
+I'm using a 32F469IDISCOVERY board (Cortex-M4). The integrated ST-Link V2-1 has firmware V2J37M27 and is configured as "Debug + Mass storage + VCP Modus" (default).
+
+It doesn't look like it has a jumper or solder bridge to connect SWO and I think it's permanently connected to ST-Link.
+
+I create an new empty project in STM32CubeIDE v1.6.1
+File -> New -> STM32 Project
+  Board Selector -> STM32F469I-DISCO -> Next
+  Project Name: swv_foo1, Language: C, Binary Type: Executable, Project Type STM32Cube -> Next
+  Firmware Package STM32Cube FW_F4 V1.26.1 -> Finish
+  
+  Initialize all peripherals with their default Mode? -> No
+  Clock Tree shows SYSCLK is HSI -> 16MHz
+
+  change PB3 to SYS_JTDO-SWO
+  change SYS Debug: "Trace Asynchronous Sw"
+
+  Save .ioc -> Generate Code -> YES
+
+  Add busy loop to main.c
+  void Delay (__IO uint32_t nCount)
+  {
+    while (nCount--)
+      {
+      }
+  }
+
+  and call it in the endless loop, toggle orange LED:
+
+  while (1)
+  {
+    /* USER CODE END WHILE */
+    HAL_GPIO_TogglePin (LED2_GPIO_Port, LED2_Pin);
+    ITM_SendChar ('x');
+    Delay (1000000L);
+    /* USER CODE BEGIN 3 */
+  }
+  
+  Project -> Build Project (finished without errors or warning)
+  Run -> Debug Configurations -> STM32 Corex-M C/C++ Application -> New launch configuration
+    Debugger -> ST-LINK (ST-LINK GDB server)
+    Serial Wire Viewer (SWV)
+      [x] Enable
+      Core Clock 16MHz
+      SWO Clock: 2000 kHz
+      Port number: 61235
+      [x] Wait for sync packet
+    
+    Apply -> Debug
+    Download and Verifying, Debugger stopps in main at HAL_Init ()
+    
+  Tab "SWV ITM Data Console"
+    Configure Trace:
+      Timestamps
+        [x] Enable Prescaler 1
+      ITM Stimulus Ports
+        [x] 0
+      -> Ok
+    Port 0 shows up
+    -> red filled "record" circle (Start Trace)
+  F8 (Resume)
+  Orange LED (LED2) starts to blink but
+  SWV Trace Log, SWV ITM Data Console, SWV Statistical Profiling  keeps empty.
+
+  I've checked DGBMCU_CR and it's 0xe0042004 so
+  TRACE_IOEN = 1
+  TRACE_MODE = 00: TRACE pin assignment for Asynchronous Mode
+  
+  chapter 37.14.2 of the STM32F469xx reference manual says
+  0xC5ACCE55 has to be written @E0000FB0 but I'm unsure if this shouldn't be done from the debugger.
+
+  dm00354244-stm32-microcontroller-debug-toolbox-stmicroelectronics.pdf
+  doesn't even mention it but I also tried
+
+    volatile uint32_t *ITM_LAR = (volatile uint32_t *)0xE0000FB0; // ITM->LAR
+    *ITM_LAR = 0xC5ACCE55; // Enable Access
+    
+  but this doesn't change anything.
+
+  I'm really running out of ideas here. Can someone help me?
+  
+-> https://community.st.com/s/question/0D53W00000oVtxzSAC/swv-not-working-with-stm32f469idisco

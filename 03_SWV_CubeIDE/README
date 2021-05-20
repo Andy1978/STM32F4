@@ -23,7 +23,7 @@ Ich starte STM32CubeIDE v1.6.1
       HAL_GPIO_TogglePin (LED2_GPIO_Port, LED2_Pin);
       ITM_SendChar ('x');
   
-  Project -> Buil Project (läuft ohne errors und ohne warnings durch)
+  Project -> Build Project (läuft ohne errors und ohne warnings durch)
   Run -> Debug Configurations -> STM32 Corex-M C/C++ Application -> New launch configuration
     Debugger -> ST-LINK (ST-LINK GDB server)
     Serial Wire Viewer (SWV)
@@ -76,3 +76,37 @@ Libraries/CMSIS/Include/core_cm4.h:#define CoreDebug_DEMCR_TRCENA_Msk         (1
   
 nett:
 https://mcuoneclipse.com/2016/10/17/tutorial-using-single-wire-output-swo-with-arm-cortex-m-and-eclipse/
+
+
+--------------------
+swv_foo2 mit Initialize .. -> NO
+
+SYSCLK zeigt HSI -> 16MHz
+
+PB3 auf SYS_JTDO-SWO gestellt
+SYS Debug: "Trace Asynchronous Sw"
+
+Dazu im PDF dm00354244-stm32-microcontroller-debug-toolbox-stmicroelectronics.pdf
+Seite 71 Kapitel 7.3: Printf via SWO/SWV
+
+jetzt gibts kein rtos, also busy wait in main
+
+void Delay (__IO uint32_t nCount)
+{
+  while (nCount--)
+    {
+    }
+}
+
+...
+
+  while (1)
+  {
+    /* USER CODE END WHILE */
+    HAL_GPIO_TogglePin (LED2_GPIO_Port, LED2_Pin);
+    ITM_SendChar ('x');
+    Delay (1000000L);
+    /* USER CODE BEGIN 3 */
+  }
+
+
