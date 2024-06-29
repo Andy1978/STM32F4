@@ -109,4 +109,7 @@ void Delay (__IO uint32_t nCount)
     /* USER CODE BEGIN 3 */
   }
 
-
+Answer form Sam_Hill333 2023-10-06:
+  The SWO isn't configured or soldered by default, make sure in cubeMX that the SWO is configured
+  (which it looks like you have done). Then close the solder bridge SB7 and the SWV should work. 
+  I had the same issue and this fixed it for me. 
